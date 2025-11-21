@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Personal Finance Tracker</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f4f7f8;
+      margin: 0;
+      padding: 0;
+      color: #333;
+    }
+    header {
+      background: #4caf50;
+      color: white;
+      padding: 1rem;
+      text-align: center;
+      font-size: 1.8rem;
+      font-weight: bold;
+    }
+    main {
+      max-width: 900px;
+      margin: 2rem auto;
+      background: white;
+      padding: 1.5rem 2rem;
+      border-radius: 8px;
+      box-shadow: 0 0 8px rgba(0,0,0,0.1);
+    }
+    h2 {
+      margin-top: 0;
+      color: #4caf50;
+    }
+    form {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-bottom: 1.5rem;
+    }
+    form > * {
+      flex: 1 1 150px;
+    }
+    label {
+      display: block;
+      margin-bottom: 0.3rem;
+      font-weight: 600;
+    }
+    input, select {
+      width: 100%;
+      padding: 0.4rem 0.5rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 1rem;
+    }
+    button {
+      background: #4caf50;
+      color: white;
+      border: none;
+      padding: 0.6rem 1.2rem;
+      font-size: 1rem;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: background-color 0.3s ease;
+      align-self: flex-end;
+      margin-top: 1.8rem;
+      flex: 0 0 120px;
+    }
+    button:hover {
+      background: #45a045;
+    }
+    section {
+      margin-top: 2rem;
+    }
+    #entriesTable {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+    }
+    #entriesTable th, #entriesTable td {
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+      padding: 0.6rem 0.5rem;
+    }
+    #entriesTable th {
+      background: #e8f5e9;
+      color: #2e7d32;
+    }
+    #dashboard {
+      display: flex;
+      justify-content: space-around;
+      margin-top: 1.5rem;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .dashboard-box {
+      background: #e8f5e9;
+      border: 1px solid #4caf50;
+      border-radius: 8px;
+      padding: 1rem;
+      width: 28%;
+      text-align: center;
+      box-shadow: 0 1px 5px rgba(0,0,0,0.1);
+    }
+    .dashboard-box h3 {
+      margin: 0.3rem 0 0.6rem;
+      font-size: 1.2rem;
+      color: #2e7d32;
+    }
+    .dashboard-box p {
+      font-size: 1.5rem;
+      margin: 0;
+      font-weight: bold;
+      color: #333;
+    }
+    canvas {
+      max-width: 100%;
+      margin-top: 2rem;
+    }
+    @media (max-width: 700px) {
+      .dashboard-box {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>Personal Finance Tracker</header>
+  <main>
+    <h2>Add Income or Expense</h2>
+    <form id="financeForm">
+      <div>
+        <label for="type">Type</label>
+        <select id="type" required>
+          <option value="">Select Type</option>
+          <option value="income">Income</option>
+          <option value="expense">Expense</option>
+        </select>
+      </div>
+      <div>
+        <label for="category">Category</label>
+        <select id="category" required>
+          <option value="">Select Category</option>
+          <optgroup label="Income Categories">
+            <option value="Salary">Salary</option>
+            <option value="Business">Business</option>
+            <option value="Gift">Gift</option>
+            <option value="Other Income">Other Income</option>
+          </optgroup>
+          <optgroup label="Expense Categories">
+            <option value="Food">Food</option>
+            <option value="Transport">Transport</option>
+            <option value="Rent">Rent</option>
+            <option value="Entertainment">Entertainment</option>
+            <option value="Bills">Bills</option>
+            <option value="Other Expense">Other Expense</option>
+          </optgroup>
+        </select>
+      </div>
+      <div>
+        <label for="amount">Amount (₹)</label>
+        <input type="number" id="amount" min="0" step="0.01" required />
+      </div>
+      <div>
+        <label for="date">Date</label>
+        <input type="date" id="date" required />
+      </div>
+      <button type="submit">Add</button>
+    </form>
+
+    <section id="dashboard">
+      <div class="dashboard-box">
+        <h3>Total Income</h3>
+        <p id="totalIncome">₹0.00</p>
+      </div>
+      <div class="dashboard-box">
+        <h3>Total Expense</h3>
+        <p id="totalExpense">₹0.00</p>
+      </div>
+      <div class="dashboard-box">
+        <h3>Balance</h3>
+        <p id="balance">₹0.00</p>
+      </div>
+    </section>
+
+    <section>
+      <h2>Entries</h2>
+      <table id="entriesTable">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Type</th>
+            <th>Category</th>
+            <th>Amount (₹)</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>Visualizations</h2>
+      <canvas id="pieChart"></canvas>
+      <canvas id="barChart"></canvas>
+    </section>
+  </main>
+
+  <script>
+    const financeForm = document.getElementById('financeForm');
+    const entriesTableBody = document.querySelector('#entriesTable tbody');
+    const totalIncomeEl = document.getElementById('totalIncome');
+    const totalExpenseEl = document.getElementById('totalExpense');
+    const balanceEl = document.getElementById('balance');
+
+    let entries = [];
+
+    financeForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+
+      const type = document.getElementById('type').value;
+      const category = document.getElementById('category').value;
+      const amount = parseFloat(document.getElementById('amount').value);
+      const date = document.getElementById('date').value;
+
+      if (!type || !category || !amount || !date) return;
+
+      entries.push({ type, category, amount, date });
+
+      financeForm.reset();
+      updateDashboard();
+      renderEntries();
+      updateCharts();
+    });
+
+    function updateDashboard() {
+      const totalIncome = entries
+        .filter(e => e.type === 'income')
+        .reduce((sum, e) => sum + e.amount, 0);
+      const totalExpense = entries
+        .filter(e => e.type === 'expense')
+        .reduce((sum, e) => sum + e.amount, 0);
+      const balance = totalIncome - totalExpense;
+
+      totalIncomeEl.textContent = `₹${totalIncome.toFixed(2)}`;
+      totalExpenseEl.textContent = `₹${totalExpense.toFixed(2)}`;
+      balanceEl.textContent = `₹${balance.toFixed(2)}`;
+    }
+
+    function renderEntries() {
+      entriesTableBody.innerHTML = '';
+      entries.forEach(e => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${e.date}</td>
+          <td style="color:${e.type === 'income' ? '#388e3c' : '#d32f2f'}; font-weight:600;">${e.type.charAt(0).toUpperCase() + e.type.slice(1)}</td>
+          <td>${e.category}</td>
+          <td>₹${e.amount.toFixed(2)}</td>
+        `;
+        entriesTableBody.appendChild(tr);
+      });
+    }
+
+    
+    const pieCtx = document.getElementById('pieChart').getContext('2d');
+    const barCtx = document.getElementById('barChart').getContext('2d');
+
+    let pieChart = new Chart(pieCtx, {
+      type: 'pie',
+      data: {
+        labels: [],
+        datasets: [{
+          label: 'Expense by Category',
+          data: [],
+          backgroundColor: [
+            '#ef5350','#ab47bc','#42a5f5','#26a69a','#d4e157','#ffa726','#8d6e63','#78909c'
+          ],
+          borderWidth: 1,
+        }]
+      },
+      options: {
+        plugins: {
+          title: {
+            display: true,
+            text: 'Expense Distribution by Category',
+            font: { size: 18 }
+          },
+          legend: { position: 'right' }
+        }
+      }
+    });
+
+    let barChart = new Chart(barCtx, {
+      type: 'bar',
+      data: {
+        labels: [],
+        datasets: [
+          {
+            label: 'Income',
+            data: [],
+            backgroundColor: '#4caf50'
+          },
+          {
+            label: 'Expense',
+            data: [],
+            backgroundColor: '#e53935'
+          }
+        ]
+      },
+      options: {
+        scales: {
+          x: { stacked: false },
+          y: { beginAtZero: true }
+        },
+        plugins: {
+          title: {
+            display: true,
+            text: 'Income and Expense by Date',
+            font: { size: 18 }
+          },
+          legend: { position: 'top' }
+        }
+      }
+    });
+
+    function updateCharts() {
+      
+      const expenseCategories = {};
+      entries.filter(e => e.type === 'expense').forEach(e => {
+        expenseCategories[e.category] = (expenseCategories[e.category] || 0) + e.amount;
+      });
+
+      pieChart.data.labels = Object.keys(expenseCategories);
+      pieChart.data.datasets[0].data = Object.values(expenseCategories);
+      pieChart.update();
+
+      
+      const dailyData = {};
+
+      entries.forEach(e => {
+        if (!dailyData[e.date]) dailyData[e.date] = { income: 0, expense: 0 };
+        dailyData[e.date][e.type] += e.amount;
+      });
+
+      
+      const sortedDates = Object.keys(dailyData).sort();
+
+      barChart.data.labels = sortedDates;
+      barChart.data.datasets[0].data = sortedDates.map(date => dailyData[date].income);
+      barChart.data.datasets[1].data = sortedDates.map(date => dailyData[date].expense);
+      barChart.update();
+    }
+
+  </script>
+</body>
+</html>
